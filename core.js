@@ -1,10 +1,10 @@
 // core.js - Bella's Brain (v3)
-// 贝拉的核心AI逻辑，支持本地模型和云端API的混合架构
+// Bella's core AI logic supporting hybrid architecture of local models and cloud APIs
 
 import { pipeline, env, AutoTokenizer, AutoModelForSpeechSeq2Seq } from './vendor/transformers.js';
 import CloudAPIService from './cloudAPI.js';
 
-// 本地模型配置
+// Local model configuration
 env.allowLocalModels = true;
 env.useBrowserCache = false;
 env.allowRemoteModels = false;
@@ -25,25 +25,25 @@ class BellaAI {
 
     constructor() {
         this.cloudAPI = new CloudAPIService();
-        this.useCloudAPI = false; // 默认使用本地模型
-        this.currentMode = 'casual'; // 聊天模式：casual, assistant, creative
+        this.useCloudAPI = false; // Default to local model
+        this.currentMode = 'casual'; // Chat mode: casual, assistant, creative
     }
 
     async init() {
         console.log('Initializing Bella\'s core AI...');
         
-        // 优先加载LLM模型（聊天功能）
+        // Load LLM model first (chat functionality)
         try {
             console.log('Loading LLM model...');
-            // 한국어 LLM 모델로 변경
+            // Using LaMini-Flan-T5-77M for English conversations
             this.llm = await pipeline('text2text-generation', 'Xenova/LaMini-Flan-T5-77M');
             console.log('LLM model loaded successfully.');
         } catch (error) {
             console.error('Failed to load LLM model:', error);
-            // LLM加载失败，但不阻止初始化
+            // LLM loading failed, but don't block initialization
         }
         
-        // 尝试加载ASR模型（语音识别功能）
+        // Try to load ASR model (speech recognition functionality)
         try {
             console.log('Loading ASR model...');
             const modelPath = 'Xenova/whisper-asr';
@@ -53,11 +53,11 @@ class BellaAI {
             console.log('ASR model loaded successfully.');
         } catch (error) {
             console.warn('ASR model failed to load, voice recognition will be disabled:', error);
-            // ASR加载失败，但不影响聊天功能
+            // ASR loading failed, but doesn't affect chat functionality
             this.asr = null;
         }
 
-        // TTS模型暂时禁用
+        // Load TTS model
         try {
             console.log('Loading TTS model...');
             this.tts = await pipeline('text-to-speech', 'Xenova/speecht5_tts', { quantized: false });
@@ -72,24 +72,24 @@ class BellaAI {
 
     async think(prompt) {
         try {
-            // 如果启用了云端API且配置正确，优先使用云端服务
+            // If cloud API is enabled and configured, use cloud service first
             if (this.useCloudAPI && this.cloudAPI.isConfigured()) {
                 return await this.thinkWithCloudAPI(prompt);
             }
             
-            // 否则使用本地模型
+            // Otherwise use local model
             return await this.thinkWithLocalModel(prompt);
             
         } catch (error) {
-            console.error('思考过程中出现错误:', error);
+            console.error('Error occurred during thinking process:', error);
             
-            // 如果云端API失败，尝试降级到本地模型
+            // If cloud API fails, try to fallback to local model
             if (this.useCloudAPI) {
-                console.log('云端API失败，降级到本地模型...');
+                console.log('Cloud API failed, falling back to local model...');
                 try {
                     return await this.thinkWithLocalModel(prompt);
                 } catch (localError) {
-                    console.error('本地模型也失败了:', localError);
+                    console.error('Local model also failed:', localError);
                 }
             }
             
@@ -97,21 +97,21 @@ class BellaAI {
         }
     }
 
-    // 使用云端API进行思考
+    // Use cloud API for thinking
     async thinkWithCloudAPI(prompt) {
         const enhancedPrompt = this.enhancePromptForMode(prompt);
         return await this.cloudAPI.chat(enhancedPrompt);
     }
 
-    // 使用本地模型进行思考
+    // Use local model for thinking
     async thinkWithLocalModel(prompt) {
         if (!this.llm) {
-            return "아직 생각하는 방법을 배우는 중이에요, 잠시만 기다려주세요...";
+            return "I'm still learning how to think, please wait a moment...";
         }
         
-        // 자연스러운 영어 대화를 위한 프롬프트
+        // Prompt for natural English conversation
         const englishPrompt = `You are Bella, a friendly AI assistant. Please respond naturally and conversationally in English. User says: "${prompt}"\nBella:`;
-        console.log('로컬 모델 프롬프트:', englishPrompt);
+        console.log('Local model prompt:', englishPrompt);
         
         const result = await this.llm(englishPrompt, {
             max_new_tokens: 80,
@@ -122,15 +122,15 @@ class BellaAI {
             repetition_penalty: 1.2,
         });
         
-        console.log('로컬 모델 원본 응답:', result);
+        console.log('Local model raw response:', result);
         
-        // 생성된 텍스트 정리
+        // Clean up generated text
         let response = result[0].generated_text;
         if (response.includes(englishPrompt)) {
             response = response.replace(englishPrompt, '').trim();
         }
         
-        // 응답이 너무 짧거나 이상한 경우 자연스러운 영어 기본 응답으로 대체
+        // Replace with natural English responses if output is too short or strange
         if (!response || response.length < 3 || response === '.' || response.trim() === '') {
             const naturalResponses = [
                 "Hi! I'm doing great, thanks for asking! How about you?",
@@ -142,14 +142,14 @@ class BellaAI {
             response = naturalResponses[Math.floor(Math.random() * naturalResponses.length)];
         }
         
-        console.log('최종 응답:', response);
+        console.log('Final response:', response);
         return response;
     }
 
-    // 根据模式增强提示词
+    // Enhance prompts based on current mode
     enhancePromptForMode(prompt, isLocal = false) {
         if (isLocal) {
-            // 로컬 모델용 자연스러운 영어 프롬프트
+            // Natural English prompts for local model
             const englishPrompts = {
                 casual: `You are Bella, a friendly AI. Have a natural conversation in English. User: "${prompt}"\nBella:`,
                 assistant: `You are Bella, a helpful AI assistant. Respond naturally in English. User: "${prompt}"\nBella:`,
@@ -157,24 +157,24 @@ class BellaAI {
             };
             return englishPrompts[this.currentMode] || englishPrompts.casual;
         } else {
-            // 클라우드 API용 자연스러운 영어 프롬프트
+            // Natural English prompts for cloud API
             return `You are Bella, a friendly AI assistant. Please respond naturally and conversationally in English.\n\nUser: ${prompt}\nBella:`;
         }
     }
 
-    // 获取错误回应
+    // Get error response
     getErrorResponse() {
         const errorResponses = [
-            "죄송해요, 지금 조금 혼란스러워서 다시 정리해볼게요...",
-            "음... 조금 더 생각해볼게요, 잠시만 기다려주세요.",
-            "생각이 복잡해서 정리할 시간이 필요해요.",
-            "다시 정리해서 말씀드릴게요, 잠시만요."
+            "Sorry, I'm a bit confused right now, let me reorganize my thoughts...",
+            "Hmm... let me think about this more, please wait a moment.",
+            "My thoughts are a bit complex, I need time to organize them.",
+            "Let me reorganize and get back to you, just a moment."
         ];
         
         return errorResponses[Math.floor(Math.random() * errorResponses.length)];
     }
 
-    // 设置聊天模式
+    // Set chat mode
     setChatMode(mode) {
         if (['casual', 'assistant', 'creative'].includes(mode)) {
             this.currentMode = mode;
@@ -183,7 +183,7 @@ class BellaAI {
         return false;
     }
 
-    // 切换AI服务提供商
+    // Switch AI service provider
     switchProvider(provider) {
         if (provider === 'local') {
             this.useCloudAPI = false;
@@ -197,17 +197,17 @@ class BellaAI {
         }
     }
 
-    // 设置API密钥
+    // Set API key
     setAPIKey(provider, apiKey) {
         return this.cloudAPI.setAPIKey(provider, apiKey);
     }
 
-    // 清除对话历史
+    // Clear conversation history
     clearHistory() {
         this.cloudAPI.clearHistory();
     }
 
-    // 获取当前配置信息
+    // Get current configuration info
     getCurrentConfig() {
         return {
             useCloudAPI: this.useCloudAPI,
@@ -219,81 +219,81 @@ class BellaAI {
 
     async listen(audioData) {
         if (!this.asr) {
-            throw new Error('语音识别模型未初始化');
+            throw new Error('Speech recognition model not initialized');
         }
         const result = await this.asr(audioData);
         return result.text;
     }
 
     async speak(text) {
-        console.log('TTS speak 호출됨, 텍스트:', text);
+        console.log('TTS speak called, text:', text);
         
-        // SpeechT5 모델이 있으면 우선 사용 (영어 지원)
+        // Use SpeechT5 model first if available (English support)
         if (this.tts) {
             try {
-                console.log('SpeechT5 TTS 모델 사용');
+                console.log('Using SpeechT5 TTS model');
                 
-                // 스피커 임베딩 로드
+                // Load speaker embeddings
                 const speaker_embeddings_url = './models/Xenova/speecht5_tts/speaker_embeddings.bin';
                 const response = await fetch(speaker_embeddings_url);
                 if (!response.ok) {
-                    throw new Error(`스피커 임베딩 로드 실패: ${response.status}`);
+                    throw new Error(`Failed to load speaker embeddings: ${response.status}`);
                 }
                 const speaker_embeddings = await response.arrayBuffer();
-                console.log('스피커 임베딩 로드 완료, 크기:', speaker_embeddings.byteLength);
+                console.log('Speaker embeddings loaded, size:', speaker_embeddings.byteLength);
                 
                 const result = await this.tts(text, {
                     speaker_embeddings: speaker_embeddings,
                 });
                 
-                console.log('SpeechT5 TTS 결과:', result);
+                console.log('SpeechT5 TTS result:', result);
                 
                 if (result && result.audio) {
-                    console.log('SpeechT5 오디오 데이터 생성 완료');
+                    console.log('SpeechT5 audio data generated successfully');
                     return result.audio;
                 } else {
-                    throw new Error('SpeechT5 결과에 오디오 데이터가 없습니다');
+                    throw new Error('No audio data in SpeechT5 result');
                 }
             } catch (speechT5Error) {
-                console.error('SpeechT5 TTS 오류, Web Speech API로 fallback:', speechT5Error);
+                console.error('SpeechT5 TTS error, falling back to Web Speech API:', speechT5Error);
             }
         }
         
-        // Fallback: Web Speech API 사용
+        // Fallback: Use Web Speech API
         if ('speechSynthesis' in window) {
             return new Promise((resolve, reject) => {
                 const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'en-US'; // 영어 설정
+                utterance.lang = 'en-US'; // English setting
                 utterance.rate = 1.0;
                 utterance.pitch = 1.0;
                 utterance.volume = 0.8;
                 
                 utterance.onstart = () => {
-                    console.log('Web Speech API TTS 재생 시작');
+                    console.log('Web Speech API TTS playback started');
                     resolve(true);
                 };
                 
                 utterance.onend = () => {
-                    console.log('Web Speech API TTS 재생 완료');
+                    console.log('Web Speech API TTS playback completed');
                 };
                 
                 utterance.onerror = (error) => {
-                    console.error('Web Speech API TTS 오류:', error);
+                    console.error('Web Speech API TTS error:', error);
                     reject(error);
                 };
                 
                 speechSynthesis.speak(utterance);
             });
         } else {
-            throw new Error('TTS를 사용할 수 없습니다');
+            throw new Error('TTS is not available');
         }
     }
 
-    // 获取云端API服务实例（用于外部访问）
+    // Get cloud API service instance (for external access)
     getCloudAPIService() {
         return this.cloudAPI;
     }
 }
 
-// ES6模块导出
+// ES6 module export
 export { BellaAI };
