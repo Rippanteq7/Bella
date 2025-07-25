@@ -227,12 +227,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
 
             // Update interim results
-            transcriptContainer.textContent = `你: ${final_transcript || interim_transcript}`;
+            transcriptContainer.textContent = `당신: ${final_transcript || interim_transcript}`;
 
             // Once we have a final result, process it with the AI
             if (final_transcript && bellaAI) {
                 const userText = final_transcript.trim();
-                transcriptContainer.textContent = `你: ${userText}`;
+                transcriptContainer.textContent = `당신: ${userText}`;
 
                 // 如果聊天界面已打开，也在聊天窗口中显示
                 if (chatInterface && chatInterface.getVisibility()) {
@@ -242,7 +242,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 try {
                     // Let Bella think
                     const thinkingText = document.createElement('p');
-                    thinkingText.textContent = '贝拉正在思考...';
+                    thinkingText.textContent = '벨라가 생각하고 있어요...';
                     thinkingText.style.color = '#888';
                     thinkingText.style.fontStyle = 'italic';
                     transcriptContainer.appendChild(thinkingText);
@@ -251,7 +251,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     
                     transcriptContainer.removeChild(thinkingText);
                     const bellaText = document.createElement('p');
-                    bellaText.textContent = `贝拉: ${response}`;
+                    bellaText.textContent = `벨라: ${response}`;
                     bellaText.style.color = '#ff6b9d';
                     bellaText.style.fontWeight = 'bold';
                     bellaText.style.marginTop = '10px';
@@ -262,18 +262,22 @@ document.addEventListener('DOMContentLoaded', async function() {
                         chatInterface.addMessage('assistant', response);
                     }
 
-                    // TTS功能暂时禁用，将在下一阶段激活
-                    // TODO: 激活语音合成功能
-                    // const audioData = await bellaAI.speak(response);
-                    // const blob = new Blob([audioData], { type: 'audio/wav' });
-                    // const audioUrl = URL.createObjectURL(blob);
-                    // const audio = new Audio(audioUrl);
-                    // audio.play();
+                    // TTS 기능 활성화
+                    try {
+                        const audioData = await bellaAI.speak(response);
+                        const blob = new Blob([audioData], { type: 'audio/wav' });
+                        const audioUrl = URL.createObjectURL(blob);
+                        const audio = new Audio(audioUrl);
+                        audio.play();
+                    } catch (ttsError) {
+                        console.warn('TTS failed:', ttsError);
+                        // TTS 실패해도 대화는 계속 진행
+                    }
 
                 } catch (error) {
                     console.error('Bella AI processing error:', error);
                     const errorText = document.createElement('p');
-                    const errorMsg = '贝拉处理时遇到问题，但她还在努力学习中...';
+                    const errorMsg = '벨라가 처리하는 중에 문제가 발생했지만, 계속 학습하고 있어요...';
                     errorText.textContent = errorMsg;
                     errorText.style.color = '#ff9999';
                     transcriptContainer.appendChild(errorText);
@@ -286,11 +290,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         };
 
         recognition.onerror = (event) => {
-            console.error('语音识别错误:', event.error);
+            console.error('음성 인식 오류:', event.error);
         };
 
     } else {
-        console.log('您的浏览器不支持语音识别功能。');
+        console.log('브라우저가 음성 인식 기능을 지원하지 않습니다.');
         // 可以在界面上给用户提示
     }
 

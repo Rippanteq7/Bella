@@ -35,6 +35,7 @@ class BellaAI {
         // 优先加载LLM模型（聊天功能）
         try {
             console.log('Loading LLM model...');
+            // 한국어 LLM 모델로 변경
             this.llm = await pipeline('text2text-generation', 'Xenova/LaMini-Flan-T5-77M');
             console.log('LLM model loaded successfully.');
         } catch (error) {
@@ -57,14 +58,14 @@ class BellaAI {
         }
 
         // TTS模型暂时禁用
-        // try {
-        //     console.log('Loading TTS model...');
-        //     this.tts = await pipeline('text-to-speech', 'Xenova/speecht5_tts', { quantized: false });
-        //     console.log('TTS model loaded successfully.');
-        // } catch (error) {
-        //     console.warn('TTS model failed to load, voice synthesis will be disabled:', error);
-        //     this.tts = null;
-        // }
+        try {
+            console.log('Loading TTS model...');
+            this.tts = await pipeline('text-to-speech', 'Xenova/speecht5_tts', { quantized: false });
+            console.log('TTS model loaded successfully.');
+        } catch (error) {
+            console.warn('TTS model failed to load, voice synthesis will be disabled:', error);
+            this.tts = null;
+        }
 
         console.log('Bella\'s core AI initialized successfully.');
     }
@@ -130,14 +131,14 @@ class BellaAI {
     enhancePromptForMode(prompt, isLocal = false) {
         const modePrompts = {
             casual: isLocal ? 
-                `作为一个温暖、可爱的AI伙伴贝拉，用轻松亲切的语气回应：${prompt}` :
-                `请用温暖、轻松的语气回应，就像一个贴心的朋友。保持简洁有趣：${prompt}`,
+                `한국어로 친근하고 따뜻한 AI 친구 벨라처럼 대화해주세요: ${prompt}` :
+                `한국어로 따뜻하고 친근한 톤으로 대화해주세요. 간결하고 재미있게: ${prompt}`,
             assistant: isLocal ?
-                `作为智能助手贝拉，提供有用、准确的帮助：${prompt}` :
-                `作为一个专业但温暖的AI助手，提供准确有用的信息和建议：${prompt}`,
+                `한국어로 도움이 되는 정보를 제공하는 벨라입니다: ${prompt}` :
+                `한국어로 전문적이면서도 따뜻한 AI 어시스턴트로서 정확하고 유용한 정보와 조언을 제공해주세요: ${prompt}`,
             creative: isLocal ?
-                `作为富有创意的AI伙伴贝拉，发挥想象力回应：${prompt}` :
-                `发挥创意和想象力，提供有趣、独特的回应和想法：${prompt}`
+                `한국어로 창의적인 AI 친구 벨라처럼 상상력을 발휘해서 대화해주세요: ${prompt}` :
+                `한국어로 창의성과 상상력을 발휘하여 재미있고 독특한 대화와 아이디어를 제공해주세요: ${prompt}`
         };
         
         return modePrompts[this.currentMode] || modePrompts.casual;
@@ -146,10 +147,10 @@ class BellaAI {
     // 获取错误回应
     getErrorResponse() {
         const errorResponses = [
-            "抱歉，我现在有点困惑，让我重新整理一下思路...",
-            "嗯...我需要再想想，请稍等一下。",
-            "我的思绪有点乱，给我一点时间整理一下。",
-            "让我重新组织一下语言，稍等片刻。"
+            "죄송해요, 지금 조금 혼란스러워서 다시 정리해볼게요...",
+            "음... 조금 더 생각해볼게요, 잠시만 기다려주세요.",
+            "생각이 복잡해서 정리할 시간이 필요해요.",
+            "다시 정리해서 말씀드릴게요, 잠시만요."
         ];
         
         return errorResponses[Math.floor(Math.random() * errorResponses.length)];
