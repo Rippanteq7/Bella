@@ -106,42 +106,60 @@ class BellaAI {
     // 使用本地模型进行思考
     async thinkWithLocalModel(prompt) {
         if (!this.llm) {
-            return "我还在学习如何思考，请稍等片刻...";
+            return "아직 생각하는 방법을 배우는 중이에요, 잠시만 기다려주세요...";
         }
         
-        const bellaPrompt = this.enhancePromptForMode(prompt, true);
+        // 자연스러운 영어 대화를 위한 프롬프트
+        const englishPrompt = `You are Bella, a friendly AI assistant. Please respond naturally and conversationally in English. User says: "${prompt}"\nBella:`;
+        console.log('로컬 모델 프롬프트:', englishPrompt);
         
-        const result = await this.llm(bellaPrompt, {
-            max_new_tokens: 50,
+        const result = await this.llm(englishPrompt, {
+            max_new_tokens: 80,
             temperature: 0.8,
             top_k: 40,
+            top_p: 0.9,
             do_sample: true,
+            repetition_penalty: 1.2,
         });
         
-        // 清理生成的文本
+        console.log('로컬 모델 원본 응답:', result);
+        
+        // 생성된 텍스트 정리
         let response = result[0].generated_text;
-        if (response.includes(bellaPrompt)) {
-            response = response.replace(bellaPrompt, '').trim();
+        if (response.includes(englishPrompt)) {
+            response = response.replace(englishPrompt, '').trim();
         }
         
-        return response || "我需要再想想...";
+        // 응답이 너무 짧거나 이상한 경우 자연스러운 영어 기본 응답으로 대체
+        if (!response || response.length < 3 || response === '.' || response.trim() === '') {
+            const naturalResponses = [
+                "Hi! I'm doing great, thanks for asking! How about you?",
+                "Hello there! I'm Bella, nice to meet you! What's on your mind?",
+                "Hey! I'm here and ready to chat. What would you like to talk about?",
+                "Hi! I'm feeling wonderful today. How can I help you?",
+                "Hello! Thanks for saying hi. I'm doing well - how are you doing?"
+            ];
+            response = naturalResponses[Math.floor(Math.random() * naturalResponses.length)];
+        }
+        
+        console.log('최종 응답:', response);
+        return response;
     }
 
     // 根据模式增强提示词
     enhancePromptForMode(prompt, isLocal = false) {
-        const modePrompts = {
-            casual: isLocal ? 
-                `한국어로 친근하고 따뜻한 AI 친구 벨라처럼 대화해주세요: ${prompt}` :
-                `한국어로 따뜻하고 친근한 톤으로 대화해주세요. 간결하고 재미있게: ${prompt}`,
-            assistant: isLocal ?
-                `한국어로 도움이 되는 정보를 제공하는 벨라입니다: ${prompt}` :
-                `한국어로 전문적이면서도 따뜻한 AI 어시스턴트로서 정확하고 유용한 정보와 조언을 제공해주세요: ${prompt}`,
-            creative: isLocal ?
-                `한국어로 창의적인 AI 친구 벨라처럼 상상력을 발휘해서 대화해주세요: ${prompt}` :
-                `한국어로 창의성과 상상력을 발휘하여 재미있고 독특한 대화와 아이디어를 제공해주세요: ${prompt}`
-        };
-        
-        return modePrompts[this.currentMode] || modePrompts.casual;
+        if (isLocal) {
+            // 로컬 모델용 자연스러운 영어 프롬프트
+            const englishPrompts = {
+                casual: `You are Bella, a friendly AI. Have a natural conversation in English. User: "${prompt}"\nBella:`,
+                assistant: `You are Bella, a helpful AI assistant. Respond naturally in English. User: "${prompt}"\nBella:`,
+                creative: `You are Bella, a creative AI companion. Chat naturally in English. User: "${prompt}"\nBella:`
+            };
+            return englishPrompts[this.currentMode] || englishPrompts.casual;
+        } else {
+            // 클라우드 API용 자연스러운 영어 프롬프트
+            return `You are Bella, a friendly AI assistant. Please respond naturally and conversationally in English.\n\nUser: ${prompt}\nBella:`;
+        }
     }
 
     // 获取错误回应
@@ -208,15 +226,67 @@ class BellaAI {
     }
 
     async speak(text) {
-        if (!this.tts) {
-            throw new Error('语音合成模型未初始化');
+        console.log('TTS speak 호출됨, 텍스트:', text);
+        
+        // SpeechT5 모델이 있으면 우선 사용 (영어 지원)
+        if (this.tts) {
+            try {
+                console.log('SpeechT5 TTS 모델 사용');
+                
+                // 스피커 임베딩 로드
+                const speaker_embeddings_url = './models/Xenova/speecht5_tts/speaker_embeddings.bin';
+                const response = await fetch(speaker_embeddings_url);
+                if (!response.ok) {
+                    throw new Error(`스피커 임베딩 로드 실패: ${response.status}`);
+                }
+                const speaker_embeddings = await response.arrayBuffer();
+                console.log('스피커 임베딩 로드 완료, 크기:', speaker_embeddings.byteLength);
+                
+                const result = await this.tts(text, {
+                    speaker_embeddings: speaker_embeddings,
+                });
+                
+                console.log('SpeechT5 TTS 결과:', result);
+                
+                if (result && result.audio) {
+                    console.log('SpeechT5 오디오 데이터 생성 완료');
+                    return result.audio;
+                } else {
+                    throw new Error('SpeechT5 결과에 오디오 데이터가 없습니다');
+                }
+            } catch (speechT5Error) {
+                console.error('SpeechT5 TTS 오류, Web Speech API로 fallback:', speechT5Error);
+            }
         }
-        // We need speaker embeddings for SpeechT5
-        const speaker_embeddings = 'models/Xenova/speecht5_tts/speaker_embeddings.bin';
-        const result = await this.tts(text, {
-            speaker_embeddings,
-        });
-        return result.audio;
+        
+        // Fallback: Web Speech API 사용
+        if ('speechSynthesis' in window) {
+            return new Promise((resolve, reject) => {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-US'; // 영어 설정
+                utterance.rate = 1.0;
+                utterance.pitch = 1.0;
+                utterance.volume = 0.8;
+                
+                utterance.onstart = () => {
+                    console.log('Web Speech API TTS 재생 시작');
+                    resolve(true);
+                };
+                
+                utterance.onend = () => {
+                    console.log('Web Speech API TTS 재생 완료');
+                };
+                
+                utterance.onerror = (error) => {
+                    console.error('Web Speech API TTS 오류:', error);
+                    reject(error);
+                };
+                
+                speechSynthesis.speak(utterance);
+            });
+        } else {
+            throw new Error('TTS를 사용할 수 없습니다');
+        }
     }
 
     // 获取云端API服务实例（用于外部访问）

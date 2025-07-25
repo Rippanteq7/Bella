@@ -50,6 +50,25 @@ document.addEventListener('DOMContentLoaded', async function() {
                     const response = await bellaAI.think(message);
                     chatInterface.hideTypingIndicator();
                     chatInterface.addMessage('assistant', response);
+                    
+                    // 채팅 인터페이스에서도 TTS 활성화
+                    console.log('채팅 TTS 호출 시작 - 응답:', response);
+                    try {
+                        console.log('채팅에서 bellaAI.speak 함수 호출 중...');
+                        const audioData = await bellaAI.speak(response);
+                        console.log('채팅 TTS 오디오 데이터 생성 완료:', audioData);
+                        
+                        if (audioData === true) {
+                            console.log('채팅 Web Speech API TTS 사용됨');
+                        } else if (audioData instanceof Float32Array && audioData.length > 0) {
+                            console.log('채팅 Float32Array 감지, WAV로 변환 필요');
+                        } else {
+                            console.warn('채팅 알 수 없는 오디오 데이터 형식:', audioData);
+                        }
+                    } catch (ttsError) {
+                        console.error('채팅 TTS 오류:', ttsError);
+                    }
+                    
                 } catch (error) {
                     console.error('AI处理错误:', error);
                     chatInterface.hideTypingIndicator();
@@ -210,7 +229,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (SpeechRecognition) {
         recognition = new SpeechRecognition();
         recognition.continuous = true; // 持续识别
-        recognition.lang = 'ko-KR'; // 设置语言为韩语
+        recognition.lang = 'en-US'; // 설정 언어를 영어
         recognition.interimResults = true; // 获取临时结果
 
         recognition.onresult = async (event) => {
@@ -263,15 +282,87 @@ document.addEventListener('DOMContentLoaded', async function() {
                     }
 
                     // TTS 기능 활성화
+                    console.log('TTS 호출 시작 - 응답:', response);
                     try {
+                        console.log('bellaAI.speak 함수 호출 중...');
                         const audioData = await bellaAI.speak(response);
-                        const blob = new Blob([audioData], { type: 'audio/wav' });
-                        const audioUrl = URL.createObjectURL(blob);
-                        const audio = new Audio(audioUrl);
-                        audio.play();
+                        console.log('TTS 오디오 데이터 생성 완료:', audioData);
+                        
+                        if (audioData) {
+                            console.log('오디오 데이터 타입:', typeof audioData, '길이:', audioData.length || 'N/A');
+                            
+                            // SpeechT5에서 Float32Array가 반환되면 WAV로 변환
+                            if (audioData instanceof Float32Array && audioData.length > 0) {
+                                console.log('Float32Array 감지, WAV로 변환 중...');
+                                const wavBuffer = convertFloat32ArrayToWav(audioData, 16000);
+                                const blob = new Blob([wavBuffer], { type: 'audio/wav' });
+                                const audioUrl = URL.createObjectURL(blob);
+                                const audio = new Audio(audioUrl);
+                                
+                                audio.onloadeddata = () => {
+                                    console.log('WAV 오디오 로드 완료');
+                                };
+                                
+                                audio.onerror = (error) => {
+                                    console.error('WAV 오디오 재생 오류:', error);
+                                };
+                                
+                                audio.onended = () => {
+                                    URL.revokeObjectURL(audioUrl);
+                                };
+                                
+                                await audio.play();
+                                console.log('WAV TTS 재생 성공');
+                            } else if (audioData === true) {
+                                // Web Speech API에서 true 반환 시 (이미 재생됨)
+                                console.log('Web Speech API TTS 사용됨');
+                            } else {
+                                console.warn('알 수 없는 오디오 데이터 형식:', audioData);
+                            }
+                        } else {
+                            console.warn('TTS 오디오 데이터가 비어있습니다');
+                        }
                     } catch (ttsError) {
-                        console.warn('TTS failed:', ttsError);
+                        console.error('TTS 오류:', ttsError);
                         // TTS 실패해도 대화는 계속 진행
+                    }
+
+                    // Float32Array를 WAV 형식으로 변환하는 함수
+                    function convertFloat32ArrayToWav(audioData, sampleRate) {
+                        const length = audioData.length;
+                        const buffer = new ArrayBuffer(44 + length * 2);
+                        const view = new DataView(buffer);
+                        
+                        // WAV 헤더 작성
+                        const writeString = (offset, string) => {
+                            for (let i = 0; i < string.length; i++) {
+                                view.setUint8(offset + i, string.charCodeAt(i));
+                            }
+                        };
+                        
+                        writeString(0, 'RIFF');
+                        view.setUint32(4, 36 + length * 2, true);
+                        writeString(8, 'WAVE');
+                        writeString(12, 'fmt ');
+                        view.setUint32(16, 16, true);
+                        view.setUint16(20, 1, true);
+                        view.setUint16(22, 1, true);
+                        view.setUint32(24, sampleRate, true);
+                        view.setUint32(28, sampleRate * 2, true);
+                        view.setUint16(32, 2, true);
+                        view.setUint16(34, 16, true);
+                        writeString(36, 'data');
+                        view.setUint32(40, length * 2, true);
+                        
+                        // 오디오 데이터 변환 (Float32 -> Int16)
+                        let offset = 44;
+                        for (let i = 0; i < length; i++) {
+                            const sample = Math.max(-1, Math.min(1, audioData[i]));
+                            view.setInt16(offset, sample * 0x7FFF, true);
+                            offset += 2;
+                        }
+                        
+                        return buffer;
                     }
 
                 } catch (error) {
