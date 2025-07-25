@@ -1,4 +1,4 @@
-// 导入BellaAI核心模块
+// Import BellaAI core modules
 import { BellaAI } from './core.js';
 import { ChatInterface } from './chatInterface.js';
 
@@ -15,17 +15,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     let bellaAI;
     let chatInterface;
     
-    // 首先初始化聊天界面（不依赖AI）
+    // Initialize chat interface first (doesn't depend on AI)
     try {
         chatInterface = new ChatInterface();
-        console.log('聊天界面初始化成功');
-        console.log('ChatInterface实例创建完成:', chatInterface);
-        console.log('聊天容器元素:', chatInterface.chatContainer);
-        console.log('聊天容器是否在DOM中:', document.body.contains(chatInterface.chatContainer));
+        console.log('Chat interface initialized successfully');
+        console.log('ChatInterface instance created:', chatInterface);
+        console.log('Chat container element:', chatInterface.chatContainer);
+        console.log('Is chat container in DOM:', document.body.contains(chatInterface.chatContainer));
         
         // 自动显示聊天界面（调试用）
         setTimeout(() => {
-            console.log('尝试自动显示聊天界面...');
+            console.log('Attempting to auto-show chat interface...');
             chatInterface.show();
             console.log('聊天界面已自动显示');
             console.log('聊天界面可见性:', chatInterface.getVisibility());
@@ -51,49 +51,49 @@ document.addEventListener('DOMContentLoaded', async function() {
                     chatInterface.hideTypingIndicator();
                     chatInterface.addMessage('assistant', response);
                     
-                    // 채팅 인터페이스에서도 TTS 활성화
-                    console.log('채팅 TTS 호출 시작 - 응답:', response);
+                    // Enable TTS for chat interface as well
+                    console.log('Chat TTS call started - response:', response);
                     try {
-                        console.log('채팅에서 bellaAI.speak 함수 호출 중...');
+                        console.log('Calling bellaAI.speak function from chat...');
                         const audioData = await bellaAI.speak(response);
-                        console.log('채팅 TTS 오디오 데이터 생성 완료:', audioData);
+                        console.log('Chat TTS audio data generated successfully:', audioData);
                         
                         if (audioData === true) {
-                            console.log('채팅 Web Speech API TTS 사용됨');
+                            console.log('Chat Web Speech API TTS used');
                         } else if (audioData instanceof Float32Array && audioData.length > 0) {
-                            console.log('채팅 Float32Array 감지, WAV로 변환 필요');
+                            console.log('Chat Float32Array detected, WAV conversion needed');
                         } else {
-                            console.warn('채팅 알 수 없는 오디오 데이터 형식:', audioData);
+                            console.warn('Chat unknown audio data format:', audioData);
                         }
                     } catch (ttsError) {
-                        console.error('채팅 TTS 오류:', ttsError);
+                        console.error('Chat TTS error:', ttsError);
                     }
                     
                 } catch (error) {
-                    console.error('AI处理错误:', error);
+                    console.error('AI processing error:', error);
                     chatInterface.hideTypingIndicator();
-                    chatInterface.addMessage('assistant', '抱歉，我现在有点困惑，请稍后再试...');
+                    chatInterface.addMessage('assistant', 'Sorry, I\'m a bit confused right now, please try again later...');
                 }
             };
         }
         
         micButton.disabled = false;
-        transcriptDiv.textContent = '贝拉已准备好，请点击麦克风开始对话。';
+        transcriptDiv.textContent = 'Bella is ready, please click the microphone to start conversation.';
     } catch (error) {
         console.error('Failed to initialize Bella AI:', error);
-        transcriptDiv.textContent = 'AI模型加载失败，但聊天界面仍可使用。';
+        transcriptDiv.textContent = 'AI model loading failed, but chat interface is still available.';
         
-        // 即使AI失败，也提供基本的聊天功能
+        // Provide basic chat functionality even if AI fails
         if (chatInterface) {
             chatInterface.onMessageSend = async (message) => {
                 chatInterface.showTypingIndicator();
                 setTimeout(() => {
                     chatInterface.hideTypingIndicator();
                     const fallbackResponses = [
-                        '我的AI核心还在加载中，请稍后再试...',
-                        '抱歉，我现在无法正常思考，但我会努力学习的！',
-                        '我的大脑还在启动中，请给我一点时间...',
-                        '系统正在更新，暂时无法提供智能回复。'
+                        'My AI core is still loading, please try again later...',
+                        'Sorry, I can\'t think properly right now, but I\'m trying to learn!',
+                        'My brain is still starting up, please give me some time...',
+                        'System is updating, temporarily unable to provide intelligent responses.'
                     ];
                     const randomResponse = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
                     chatInterface.addMessage('assistant', randomResponse);
@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             };
         }
         
-        // 禁用语音功能，但保持界面可用
+        // Disable voice functionality, but keep interface available
         micButton.disabled = true;
     }
 
@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Hide it after the animation to prevent it from blocking interactions
         setTimeout(() => {
             loadingScreen.style.display = 'none';
-            // 显示聊天控制面板
+            // Show chat control panel
             const chatControlPanel = document.querySelector('.chat-control-panel');
             if (chatControlPanel) {
                 chatControlPanel.classList.add('visible');
@@ -281,30 +281,30 @@ document.addEventListener('DOMContentLoaded', async function() {
                         chatInterface.addMessage('assistant', response);
                     }
 
-                    // TTS 기능 활성화
-                    console.log('TTS 호출 시작 - 응답:', response);
+                    // Enable TTS functionality
+                    console.log('TTS call started - response:', response);
                     try {
-                        console.log('bellaAI.speak 함수 호출 중...');
+                        console.log('Calling bellaAI.speak function...');
                         const audioData = await bellaAI.speak(response);
-                        console.log('TTS 오디오 데이터 생성 완료:', audioData);
+                        console.log('TTS audio data generated successfully:', audioData);
                         
                         if (audioData) {
-                            console.log('오디오 데이터 타입:', typeof audioData, '길이:', audioData.length || 'N/A');
+                            console.log('Audio data type:', typeof audioData, 'length:', audioData.length || 'N/A');
                             
-                            // SpeechT5에서 Float32Array가 반환되면 WAV로 변환
+                            // Convert to WAV if Float32Array is returned from SpeechT5
                             if (audioData instanceof Float32Array && audioData.length > 0) {
-                                console.log('Float32Array 감지, WAV로 변환 중...');
+                                console.log('Float32Array detected, converting to WAV...');
                                 const wavBuffer = convertFloat32ArrayToWav(audioData, 16000);
                                 const blob = new Blob([wavBuffer], { type: 'audio/wav' });
                                 const audioUrl = URL.createObjectURL(blob);
                                 const audio = new Audio(audioUrl);
                                 
                                 audio.onloadeddata = () => {
-                                    console.log('WAV 오디오 로드 완료');
+                                    console.log('WAV audio loaded successfully');
                                 };
                                 
                                 audio.onerror = (error) => {
-                                    console.error('WAV 오디오 재생 오류:', error);
+                                    console.error('WAV audio playback error:', error);
                                 };
                                 
                                 audio.onended = () => {
@@ -312,28 +312,28 @@ document.addEventListener('DOMContentLoaded', async function() {
                                 };
                                 
                                 await audio.play();
-                                console.log('WAV TTS 재생 성공');
+                                console.log('WAV TTS playback successful');
                             } else if (audioData === true) {
-                                // Web Speech API에서 true 반환 시 (이미 재생됨)
-                                console.log('Web Speech API TTS 사용됨');
+                                // When Web Speech API returns true (already played)
+                                console.log('Web Speech API TTS used');
                             } else {
-                                console.warn('알 수 없는 오디오 데이터 형식:', audioData);
+                                console.warn('Unknown audio data format:', audioData);
                             }
                         } else {
-                            console.warn('TTS 오디오 데이터가 비어있습니다');
+                            console.warn('TTS audio data is empty');
                         }
                     } catch (ttsError) {
-                        console.error('TTS 오류:', ttsError);
-                        // TTS 실패해도 대화는 계속 진행
+                        console.error('TTS error:', ttsError);
+                        // Continue conversation even if TTS fails
                     }
 
-                    // Float32Array를 WAV 형식으로 변환하는 함수
+                    // Function to convert Float32Array to WAV format
                     function convertFloat32ArrayToWav(audioData, sampleRate) {
                         const length = audioData.length;
                         const buffer = new ArrayBuffer(44 + length * 2);
                         const view = new DataView(buffer);
                         
-                        // WAV 헤더 작성
+                        // Write WAV header
                         const writeString = (offset, string) => {
                             for (let i = 0; i < string.length; i++) {
                                 view.setUint8(offset + i, string.charCodeAt(i));
@@ -354,7 +354,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         writeString(36, 'data');
                         view.setUint32(40, length * 2, true);
                         
-                        // 오디오 데이터 변환 (Float32 -> Int16)
+                        // Convert audio data (Float32 -> Int16)
                         let offset = 44;
                         for (let i = 0; i < length; i++) {
                             const sample = Math.max(-1, Math.min(1, audioData[i]));
