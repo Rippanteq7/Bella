@@ -210,7 +210,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (SpeechRecognition) {
         recognition = new SpeechRecognition();
         recognition.continuous = true; // 持续识别
-        recognition.lang = 'zh-CN'; // 设置语言为中文
+        recognition.lang = 'ko-KR'; // 设置语言为韩语
         recognition.interimResults = true; // 获取临时结果
 
         recognition.onresult = async (event) => {
