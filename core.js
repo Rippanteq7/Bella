@@ -36,7 +36,7 @@ class BellaAI {
         try {
             console.log('Loading LLM model...');
             // Using LaMini-Flan-T5-77M for English conversations
-            this.llm = await pipeline('text2text-generation', 'Xenova/LaMini-Flan-T5-77M');
+            this.llm = await pipeline('text2text-generation', 'Xenova/LaMini-Flan-T5-77M', { localFilesOnly: true });
             console.log('LLM model loaded successfully.');
         } catch (error) {
             console.error('Failed to load LLM model:', error);
@@ -49,7 +49,7 @@ class BellaAI {
             const modelPath = 'Xenova/whisper-asr';
             const tokenizer = await AutoTokenizer.from_pretrained(modelPath);
             const model = await AutoModelForSpeechSeq2Seq.from_pretrained(modelPath);
-            this.asr = await pipeline('automatic-speech-recognition', model, { tokenizer });
+            this.asr = await pipeline('automatic-speech-recognition', modelPath, { localFilesOnly: true, tokenizer });
             console.log('ASR model loaded successfully.');
         } catch (error) {
             console.warn('ASR model failed to load, voice recognition will be disabled:', error);
@@ -60,7 +60,7 @@ class BellaAI {
         // Load TTS model
         try {
             console.log('Loading TTS model...');
-            this.tts = await pipeline('text-to-speech', 'Xenova/speecht5_tts', { quantized: false });
+            this.tts = await pipeline('text-to-speech', 'Xenova/speecht5_tts', { localFilesOnly: true, quantized: false });
             console.log('TTS model loaded successfully.');
         } catch (error) {
             console.warn('TTS model failed to load, voice synthesis will be disabled:', error);
